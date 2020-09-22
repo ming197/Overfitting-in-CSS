@@ -1,0 +1,12 @@
+numpy
+pandas
+datetime
+plotly
+plotly.express
+bokeh
+sklearn
+IPython
+tqdm
+psutil
+requests
+adjustText
