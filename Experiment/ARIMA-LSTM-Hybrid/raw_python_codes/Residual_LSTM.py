@@ -63,7 +63,8 @@ get_custom_objects().update({'double_tanh':Double_Tanh(double_tanh)})
 # Model Generation
 model = Sequential()
 #check https://machinelearningmastery.com/use-weight-regularization-lstm-networks-time-series-forecasting/
-model.add(LSTM(25, input_shape=(20,1), dropout=0.0, kernel_regularizer=l1_l2(0.00,0.00), bias_regularizer=l1_l2(0.00,0.00)))
+# model.add(LSTM(25, input_shape=(20,1), dropout=0.0, kernel_regularizer=l1_l2(0.00,0.00), bias_regularizer=l1_l2(0.00,0.00)))
+model.add(LSTM(25, input_shape=(20,1), dropout=0.0, kernel_regularizer=l1_l2(0.00,0.1), bias_regularizer=l1_l2(0.00,0.1)))
 model.add(Dense(1))
 model.add(Activation(double_tanh))
 model.compile(loss='mean_squared_error', optimizer='adam', metrics=['mse', 'mae'])
@@ -72,25 +73,30 @@ model.compile(loss='mean_squared_error', optimizer='adam', metrics=['mse', 'mae'
 print(model.metrics_names)
 # Fitting the Model
 model_scores = {}
-Reg = False
+Reg = True
 d = 'hybrid_LSTM'
 
 if Reg :
     d += '_with_reg'
 
 epoch_num=1
-for _ in range(124):
+for _ in range(350):
 
     # train the model
-    dir = './models/'+d
+    dir = '../models/'+d
+    # if dir not exit, make it
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+        print("Make the file: {}".format(dir))
     file_list = os.listdir(dir)
+
     if len(file_list) != 0 :
         epoch_num = len(file_list) + 1
         recent_model_name = 'epoch'+str(epoch_num-1)+'.h5'
-        filepath = './models/' + d + '/' + recent_model_name
+        filepath = '../models/' + d + '/' + recent_model_name
         model = load_model(filepath)
 
-    filepath = './models/' + d + '/epoch'+str(epoch_num)+'.h5'
+    filepath = '../models/' + d + '/epoch'+str(epoch_num)+'.h5'
 
     checkpoint = ModelCheckpoint(filepath, monitor='loss', verbose=1, save_best_only=False, mode='min')
     callbacks_list = [checkpoint]
@@ -110,8 +116,14 @@ for _ in range(124):
     print('test1 set score : mse - ' + str(score_test1[1]) +' / mae - ' + str(score_test1[2]))
     print('test2 set score : mse - ' + str(score_test2[1]) +' / mae - ' + str(score_test2[2]))
 #.history['mean_squared_error'][0]
+
     # get former score data
-    df = pd.read_csv("./models/"+d+".csv")
+    file_name = "../models/"+d+".csv"
+    if not os.path.exists(file_name):
+        df = pd.DataFrame(columns = ["DEV_MAE","DEV_MSE","TEST1_MAE","TEST1_MSE","TEST2_MAE","TEST2_MSE","TRAIN_MAE","TRAIN_MSE"])
+    else:
+        df = pd.read_csv(file_name)
+        
     train_mse = list(df['TRAIN_MSE'])
     dev_mse = list(df['DEV_MSE'])
     test1_mse = list(df['TEST1_MSE'])
@@ -146,5 +158,5 @@ for _ in range(124):
 
     # save newly created score dataset
     model_scores_df = pd.DataFrame(model_scores)
-    model_scores_df.to_csv("./models/"+d+".csv")
+    model_scores_df.to_csv("../models/"+d+".csv")
 
