@@ -10,11 +10,12 @@ from keras.callbacks import ModelCheckpoint
 from keras.regularizers import l1_l2
 
 parser = argparse.ArgumentParser(description='Parameters Configuration!')
-parser.add_argument('--Regularization', '-r', help='正则化', default=False)
+parser.add_argument('--Reg', '-r', help='正则化', default=False)
 parser.add_argument('--Dropout', '-d', help='Dropout', default=False)
 args = parser.parse_args()
-Reg = args.Regularization
+Reg = args.Reg
 Dropout = args.Dropout
+
 
 d = 'hybrid_LSTM'
 
@@ -73,18 +74,20 @@ get_custom_objects().update({'double_tanh':Double_Tanh(double_tanh)})
 # Model Generation
 model = Sequential()
 #check https://machinelearningmastery.com/use-weight-regularization-lstm-networks-time-series-forecasting/
-if not Reg and not Dropout:
+print("Reg: ", Reg)
+print("Dropout: ", Dropout)
+if (not Reg and not Dropout):
     model.add(LSTM(25, input_shape=(20,1), dropout=0.0, kernel_regularizer=l1_l2(0.00,0.00), bias_regularizer=l1_l2(0.00,0.00)))
-elif Reg and Dropout:
+if (Reg and Dropout):
     d += '_with_reg_dropout'
-    model.add(LSTM(25, input_shape=(20,1), dropout=0.2, kernel_regularizer=l1_l2(0.00,0.1), bias_regularizer=l1_l2(0.00,0.1))
-elif Reg and not Dropout:
+    model.add(LSTM(25, input_shape=(20,1), dropout=0.2, kernel_regularizer=l1_l2(0.00,0.1), bias_regularizer=l1_l2(0.00,0.1)))
+if (Reg and not Dropout):
     d += '_with_reg'
     model.add(LSTM(25, input_shape=(20,1), dropout=0.0, kernel_regularizer=l1_l2(0.00,0.1), bias_regularizer=l1_l2(0.00,0.1)))
-elif Dropout and not Reg:
-    d += ''_with_dropout
+if (Dropout and not Reg):
+    d += '_with_dropout'
     model.add(LSTM(25, input_shape=(20,1), dropout=0.2, kernel_regularizer=l1_l2(0.00,0.00), bias_regularizer=l1_l2(0.00,0.00)))
-# model.add(LSTM(25, input_shape=(20,1), dropout=0.0, kernel_regularizer=l1_l2(0.00,0.1), bias_regularizer=l1_l2(0.00,0.1)))
+
 model.add(Dense(1))
 model.add(Activation(double_tanh))
 model.compile(loss='mean_squared_error', optimizer='adam', metrics=['mse', 'mae'])
