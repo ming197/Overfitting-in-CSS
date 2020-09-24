@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 import argparse
+import ast
 from keras.models import Sequential, load_model
 from keras.layers import Dense, LSTM, Activation
 from keras import backend as K
@@ -10,11 +11,11 @@ from keras.callbacks import ModelCheckpoint
 from keras.regularizers import l1_l2
 
 parser = argparse.ArgumentParser(description='Parameters Configuration!')
-parser.add_argument('--Reg', '-r', help='正则化', default=False)
-parser.add_argument('--Dropout', '-d', help='Dropout', default=False)
+parser.add_argument('--reg', '-r', help='正则化', type=ast.literal_eval, default=False)
+parser.add_argument('--dropout', '-d', help='Dropout', type=ast.literal_eval, default=False)
 args = parser.parse_args()
-Reg = args.Reg
-Dropout = args.Dropout
+Reg = args.reg
+Dropout = args.dropout
 
 
 d = 'hybrid_LSTM'
