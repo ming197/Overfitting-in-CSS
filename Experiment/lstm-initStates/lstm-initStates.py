@@ -5,7 +5,6 @@ import torch.nn as nn
 from torch.optim import Adam
 from pathlib import Path
 import myDataloader as db
-
 import matplotlib.pyplot as plt
 
 
@@ -87,22 +86,37 @@ if __name__ == "__main__":
 
         for epoch in range(numEpoch):
             for index, (nn_in, nn_label) in enumerate(db.data_loader):
-                nn_in = nn_in.to(device)
-                train_data = nn_in.permute(1, 0)  # (seqLength, batchsize)
-                train_data = train_data.view(db.seqLenth, -1, model.output_dim)
-                output = model.forward(train_data, nn_label)
+                # 训练集和测试机中seq的长度
+                train_seqLenth = 121
+                test_seqLenth = db.seqLenth - train_seqLenth
+                # 拆分训练集数据和测试集数据
+                nn_in_train, nn_in_test = nn_in.split([train_seqLenth, test_seqLenth], dim = 1)
+                nn_in_train = nn_in_train.to(device)
+                nn_in_test = nn_in_test.to(device)
+                # transform
+                train_data = nn_in_train.permute(1, 0)  # (train_seqLenth, batchsize)
+                test_data = nn_in_test.permute(1, 0)
+                train_data = train_data.view(train_seqLenth, -1, model.output_dim)
+                test_data = test_data.view(test_seqLenth, -1, model.output_dim)
+                # output of train and test
+                output_train = model.forward(train_data, nn_label)
+                output_test = model.forward(test_data, nn_label)
+                # optimizer
                 optimizer.zero_grad()
-                loss = criterion(output, train_data)
-                loss = loss.to(device)
-                loss.backward()
+                loss_train = criterion(output_train, train_data)
+                loss_test = criterion(output_test, test_data)
+                loss_train = loss_train.to(device)
+                loss_test = loss_test.to(device)
+                loss_train.backward()
                 optimizer.step()
 
             if epoch % 10 == 0:
-                loss_val = loss.detach().cpu().numpy()
-                print(f'Epoch {epoch}, loss: {loss_val:.8f}')
-                fid.write('%d %.8f\n'%(epoch, loss_val))
+                loss_val_train = loss_train.detach().cpu().numpy()
+                loss_val_test = loss_test.detach().cpu().numpy()
+                print(f'Epoch {epoch}, loss_train: {loss_val_train:.8f}, loss_test: {loss_val_test:.8f}')
+                fid.write('%d %.8f %.8f\n'%(epoch, loss_val_train, loss_val_test))
                 fid.flush()
-                if (minLoss > loss_val):
+                if (minLoss > loss_val_train):
                     torch.save({
                         'epoch': epoch,
                         'model_state_dict': model.state_dict(),
