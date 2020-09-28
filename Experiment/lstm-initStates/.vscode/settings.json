@@ -1,3 +1,4 @@
 {
-    "python.pythonPath": "C:\\Users\\CSS123\\anaconda3\\envs\\finance\\python.exe"
+    "python.pythonPath": "C:\\Users\\CSS123\\anaconda3\\envs\\finance\\python.exe",
+    "git.ignoreLimitWarning": true
 }
