@@ -121,7 +121,7 @@ if __name__ == "__main__":
                         'epoch': epoch,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict(),
-                        'loss': loss
+                        'loss': loss_val_train
                     }, './result/model_best.tar')
 
         fid.close()
