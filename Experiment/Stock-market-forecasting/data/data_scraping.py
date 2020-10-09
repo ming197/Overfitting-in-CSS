@@ -43,6 +43,7 @@ for year in years:
                 # 补NaN
                 month_open = pd.concat([month_open, data_open], join='outer', axis=1)
                 month_close = pd.concat([month_close, data_close], join='outer', axis=1)
+                print("{} in {} finished!".format(ticker, month_str))
             except:
                 with open(file_exceptions, 'a') as f:
                     f.write("{} in {} not exist!\n".format(ticker, month_str))
