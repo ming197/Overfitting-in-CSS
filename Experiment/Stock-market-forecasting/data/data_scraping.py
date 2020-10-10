@@ -19,7 +19,7 @@ def getInfo(ticker, start_date, end_date):
     return data['Open'], data['Close']
 
 
-years = [str(x) for x in range(1990, 2019)]
+years = [str(x) for x in range(1991, 2019)]
 
 for year in years:
     tickers_open = pd.DataFrame()
@@ -51,9 +51,17 @@ for year in years:
                 
         print("Infomation in {} finished!".format(month_str))
         # 将一年中所有月份的股票信息合并， 空缺处为NaN 
-        tickers_open = pd.concat([tickers_open, month_open])
-        tickers_close = pd.concat([tickers_close, month_close])
-
+        try:
+            tickers_open = pd.concat([tickers_open, month_open], join='outer', axis=0)
+        except:
+            tickers_open.to_csv("Open-{}/{}-error.csv".format(month_str, year))
+            month_open.to_csv("MonthOpen-{}/{}-error.csv".format(month_str, year))
+        try:
+            tickers_close = pd.concat([tickers_close, month_close], join='outer', axis=0)
+        except:
+            tickers_close.to_csv("Close-{}/{}-error.csv".format(month_str, year))
+            month_close.to_csv("MonthClose-{}/{}-error.csv".format(month_str, year))
+        
     # 存储每年的股票信息
     tickers_open.to_csv("Open-{}.csv".format(year))
     tickers_close.to_csv("Close-{}.csv".format(year))
