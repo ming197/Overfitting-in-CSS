@@ -14,55 +14,69 @@ API_KEY = '95NJZYJYyXToregziQw8'
 
 # 获取股票的开盘价和收尾价
 def getInfo(ticker, start_date, end_date):
+    # API调用数据
     data = quandl.get("WIKI/{}".format(ticker.replace(".","_")), start_date=start_date, end_date=end_date, api_key=API_KEY)
     data = data.loc[:, ['Open', 'Close']]
-    return data['Open'], data['Close']
+
+    # 全部转换为DataFrame数据类型，避免拼接时发生错误
+    data_open = pd.DataFrame(data['Open'].rename(ticker, inplace=True))
+    data_close = pd.DataFrame(data['Close'].rename(ticker, inplace=True))
+
+    return data_open, data_close
 
 
-years = [str(x) for x in range(1991, 2019)]
+def main():
 
-for year in years:
-    tickers_open = pd.DataFrame()
-    tickers_close = pd.DataFrame()
+    path = "data_monthly"
+    
 
-    months = [("{:02d}".format(x) + '/' + year) for x in range(1, 13)]
-    for month in months:
-        # 获取日期信息，以及所有的股票名称
-        month_str = month
-        month = datetime.strptime(month, "%m/%Y") # 转换成时间戳
-        monthFirstDay = datetime(month.year, month.month, 1).strftime(('%Y-%m-%d'))
-        monthLastDay = datetime(month.year, month.month, calendar.monthrange(month.year, month.month)[1]).strftime(('%Y-%m-%d'))
-        tickers_month =tickers[month_str].dropna().tolist()
+    years = [str(x) for x in range(1990, 2019)]
 
-        # 获得每个月每支股票的信息， index为日期， cols为股票名称
-        month_open = pd.DataFrame()
-        month_close = pd.DataFrame()
-        for ticker in tickers_month:
-            try:
-                data_open, data_close = getInfo(ticker, monthFirstDay, monthLastDay)
-                # 补NaN
-                month_open = pd.concat([month_open, data_open], join='outer', axis=1)
-                month_close = pd.concat([month_close, data_close], join='outer', axis=1)
-                print("{} in {} finished!".format(ticker, month_str))
-            except:
-                with open(file_exceptions, 'a') as f:
-                    f.write("{} in {} not exist!\n".format(ticker, month_str))
-                print("{} in {} not exist!".format(ticker, month_str))
-                
-        print("Infomation in {} finished!".format(month_str))
-        # 将一年中所有月份的股票信息合并， 空缺处为NaN 
-        try:
+    for year in years:
+        tickers_open = pd.DataFrame()
+        tickers_close = pd.DataFrame()
+        months = [("{:02d}".format(x) + '/' + year) for x in range(1, 13)]
+
+        for month in months:
+            # 获取日期信息，以及所有的股票名称
+            month_str = month
+            month = datetime.strptime(month, "%m/%Y") # 转换成时间戳
+            monthFirstDay = datetime(month.year, month.month, 1).strftime(('%Y-%m-%d'))
+            monthLastDay = datetime(month.year, month.month, calendar.monthrange(month.year, month.month)[1]).strftime(('%Y-%m-%d'))
+            tickers_month =tickers[month_str].dropna().tolist()
+
+            # 获得每个月每支股票的信息， index为日期， cols为股票名称
+            month_open = pd.DataFrame()
+            month_close = pd.DataFrame()
+            for ticker in tickers_month:
+                try:
+                    data_open, data_close = getInfo(ticker, monthFirstDay, monthLastDay)
+                    # 补NaN
+                    month_open = pd.concat([month_open, data_open], join='outer', axis=1)
+                    month_close = pd.concat([month_close, data_close], join='outer', axis=1)
+                    print("{} in {} finished!".format(ticker, month_str))
+                except:
+                    with open(file_exceptions, 'a') as f:
+                        f.write("{} in {} not exist!\n".format(ticker, month_str))
+                    print("{} in {} not exist!".format(ticker, month_str))
+                 
+            print("Infomation in {} finished!".format(month_str))
+            month_open.index.name = month_close.index.name = 'Date'
+            month_open.to_csv(path + "/Open-{}.csv".format('-'.join(month_str.split('/')[::-1])))
+            month_close.to_csv(path + "/Close-{}.csv".format('-'.join(month_str.split('/')[::-1])))
+
+            # 将一年中所有月份的股票信息合并， 空缺处为NaN 
             tickers_open = pd.concat([tickers_open, month_open], join='outer', axis=0)
-        except:
-            tickers_open.to_csv("Open-{}/{}-error.csv".format(month_str, year))
-            month_open.to_csv("MonthOpen-{}/{}-error.csv".format(month_str, year))
-        try:
             tickers_close = pd.concat([tickers_close, month_close], join='outer', axis=0)
-        except:
-            tickers_close.to_csv("Close-{}/{}-error.csv".format(month_str, year))
-            month_close.to_csv("MonthClose-{}/{}-error.csv".format(month_str, year))
-        
-    # 存储每年的股票信息
-    tickers_open.to_csv("Open-{}.csv".format(year))
-    tickers_close.to_csv("Close-{}.csv".format(year))
-    print("S&P500 price data in {} finished!".format(year))
+            
+            
+                
+            
+        # 存储每年的股票信息
+        tickers_open.index.name = tickers_close.index.name = 'Date'
+        tickers_open.to_csv("Open-{}.csv".format(year))
+        tickers_close.to_csv("Close-{}.csv".format(year))
+        print("S&P500 price data in {} finished!".format(year))
+
+if __name__ == "__main__":
+    main()
