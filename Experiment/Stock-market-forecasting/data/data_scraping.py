@@ -10,7 +10,7 @@ file_exceptions = "exceptions.txt"
 tickers = pd.read_csv('SPXconst.csv')
 
 
-API_KEY = '95NJZYJYyXToregziQw8'
+API_KEY = ['95NJZYJYyXToregziQw8', 'yJAooAzza7L4EJxyFkcs', '2H5CLCnZE_AUSAzUhicw', 'KhALVVzAJx-FK-XsFxvS', 'jMVcgK1aP-MUmyKChg9-']
 
 # 获取股票的开盘价和收尾价
 def getInfo(ticker, start_date, end_date):
