@@ -38,12 +38,13 @@ class Sequence(nn.Module):
         seqLength = input.shape[0]
         numDataInBatch = input.shape[1]
         for i in range(len(label)):
-            idxSeq = label[i][0]
+            idxSeq = label[i]
             temp = self.h0[:,idxSeq,:].view(1,1,-1)
             if(i == 0):
                 h0 = temp
             else:
                 h0 = torch.cat((h0, temp), 1)
+            
 
         for t in range(seqLength):
             if(t ==0):
@@ -65,6 +66,33 @@ class Sequence(nn.Module):
         return outputs
 
 
+# mix up
+def mixup_data(x, y, alpha=0.2, use_cuda=False):
+
+    '''Compute the mixup data. Return mixed inputs, pairs of targets, and lambda'''
+    if alpha > 0.:
+        lam = np.random.beta(alpha, alpha)
+    else:
+        lam = 1.
+    batch_size = x.size()[0]
+    if use_cuda:
+        index = torch.randperm(batch_size).cuda()
+    else:
+        index = torch.randperm(batch_size)
+
+    y = np.array(y)
+    mixed_x = lam * x + (1 - lam) * x[index,:]
+    mixed_y = lam * y + (1 - lam) * y[index]
+    mixed_y = mixed_y.astype(np.int32)
+    
+    return mixed_x, mixed_y, lam, x, x[index,:]
+
+
+def mixup_criterion(y_a, y_b, lam):
+    return lambda criterion, pred: lam * criterion(pred, y_a) + (1 - lam) * criterion(pred, y_b)
+
+
+
 if __name__ == "__main__":
 
     trainModel = False # True for train, False for evaluation
@@ -81,11 +109,12 @@ if __name__ == "__main__":
         criterion = nn.MSELoss()
 
 
-        fid = open('./result/loss.txt','w')
+        fid = open('./result_mixup/loss.txt','w')
         minLoss = 0.001
 
         for epoch in range(numEpoch):
             for index, (nn_in, nn_label) in enumerate(db.data_loader):
+                nn_label = [x[0] for x in nn_label]
                 # nn_in: 735 * 241
                 # 训练集和测试集的样本数，以及序列长度
                 train_nums = 400
@@ -98,6 +127,8 @@ if __name__ == "__main__":
                 nn_in_test = nn_in_test.to(device)
                 label_train = nn_label[:train_nums]
                 label_test = nn_label[train_nums:]
+                # mix_up
+                nn_in_train, label_train, lam, origin_train, perm_train = mixup_data(nn_in_train, label_train)
                 # transform
                 train_data = nn_in_train.permute(1, 0)  # (train_seqLenth, train_nums)
                 test_data = nn_in_test.permute(1, 0)
@@ -109,13 +140,16 @@ if __name__ == "__main__":
                 output_test = model.forward(test_data, label_test)
                 # optimizer
                 optimizer.zero_grad()
-                loss_train = criterion(output_train, train_data)
+                # mixup_criterion
+                loss_func = mixup_criterion(origin_train, perm_train, lam)
+                loss_train = loss_func(criterion, output_train)
+                
                 loss_test = criterion(output_test, test_data)
                 loss_train = loss_train.to(device)
                 loss_test = loss_test.to(device)
                 loss_train.backward()
                 optimizer.step()
-
+            
             if epoch % 10 == 0:
                 loss_val_train = loss_train.detach().cpu().numpy()
                 loss_val_test = loss_test.detach().cpu().numpy()
@@ -128,14 +162,14 @@ if __name__ == "__main__":
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict(),
                         'loss': loss_train
-                    }, './result/model_best.tar')
+                    }, './result_mixup/model_best.tar')
 
         fid.close()
     elif (sys.argv[1] == 'eval'):
         if(torch.cuda.is_available()):
-            checkpoint = torch.load('./result/model_best.tar')
+            checkpoint = torch.load('./result_mixup/model_best.tar')
         else:
-            checkpoint = torch.load('./result/model_best.tar', map_location=torch.device('cpu'))
+            checkpoint = torch.load('./result_mixup/model_best.tar', map_location=torch.device('cpu'))
 
         learningRate = 0.001
         numEpoch = 100000
@@ -151,7 +185,7 @@ if __name__ == "__main__":
         model.train()
 
         # Save the initial hidden states (h0)
-        fid = open("./result/initStates_from_best.txt", 'w')
+        fid = open("./result_mixup/initStates_from_best.txt", 'w')
         for idx in range(model.h0.shape[1]):
             for dim in range(model.h0.shape[2]):
                 fid.write('%.8f\t' % model.h0[0][idx][dim].item())
@@ -160,7 +194,7 @@ if __name__ == "__main__":
 
 
         # Save the model's output (y)
-        Path("./result/output").mkdir(parents=True, exist_ok=True)
+        Path("./result_mixup/output").mkdir(parents=True, exist_ok=True)
         for index, (nn_in, nn_label) in enumerate(db.data_loader):
             nn_in = nn_in.to(device)
             train_data = nn_in.permute(1, 0)  # (seqLength, batchsize)
@@ -185,9 +219,9 @@ if __name__ == "__main__":
                 draw(output[:,idxBatch,0], 'r')
                 draw(train_data[:, idxBatch, 0], 'b')
                 plt.draw()
-                plt.savefig('./result/output/predict_idxSeq_%d.png' % idxSeq)
+                plt.savefig('./result_mixup/output/predict_idxSeq_%d.png' % idxSeq)
                 plt.close()
-                fid = open("./result/output/predict_idxSeq_%d.txt" % idxSeq, 'w')
+                fid = open("./result_mixup/output/predict_idxSeq_%d.txt" % idxSeq, 'w')
                 for ff in range(output.shape[0]):
                     fid.write('%.8f\t%.8f\n' % (output[ff,idxBatch,0],train_data[ff, idxBatch, 0]))
 
