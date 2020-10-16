@@ -62,7 +62,8 @@ def mixup_data(x, y, alpha=0.2, use_cuda=False):
 
     train_size = x.shape[0]
     if use_cuda:
-        index = torch.randperm(batch_size).cuda()
+        # index = torch.randperm(batch_size).cuda()
+        pass
     else:
         index = np.random.permutation(train_size)
 
