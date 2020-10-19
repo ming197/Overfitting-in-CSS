@@ -16,7 +16,7 @@ tickers = pd.read_csv('SPXconst.csv')
 
 API_KEY = ['95NJZYJYyXToregziQw8', 'yJAooAzza7L4EJxyFkcs', '2H5CLCnZE_AUSAzUhicw', 'KhALVVzAJx-FK-XsFxvS', 'jMVcgK1aP-MUmyKChg9-']
 api_index = 0
-calls_limit = 50000
+calls_limit = 50000*10
 calls_num = [0 for x in API_KEY]
 calls_flag = [False for x in API_KEY]
 shutdown = False
@@ -59,7 +59,7 @@ def getInfo(ticker, start_date, end_date):
     data = quandl.get("WIKI/{}".format(ticker.replace(".","_")), start_date=start_date, end_date=end_date, api_key=API_KEY[api_index])
     data = data.loc[:, ['Open', 'Close']]
     api_index = (api_index + 1) % len(API_KEY)
-    time.sleep(2)
+    time.sleep(1)
 
     return data
 
