@@ -31,6 +31,7 @@ class Sequence(nn.Module):
         self.linear = nn.Linear(self.hidden_size, self.output_dim)
 
         h0 = torch.zeros(self.numLayers, self.numData, self.hidden_size).to(device)
+        # print("h0 size: ", h0.size())
         self.h0 = nn.Parameter(h0, requires_grad=True)
 
 
@@ -49,6 +50,8 @@ class Sequence(nn.Module):
             if(t ==0):
                 h_t = h0
                 c_t = torch.zeros(self.numLayers, numDataInBatch, self.hidden_size).to(device)
+                print("h_t size: ", h_t.size())
+                print("c_t size: ", c_t.size())
                 input_t = torch.zeros(1, numDataInBatch, self.input_dim).to(device)  # firstDim = time = 1
             else:
                 input_t = output
@@ -68,11 +71,12 @@ class Sequence(nn.Module):
 if __name__ == "__main__":
 
     trainModel = False # True for train, False for evaluation
-    if(len(sys.argv) != 2 or (sys.argv[1] != 'train' and sys.argv[1] != 'eval')):
-        print('Please specify the mode.\ne.g. python lstm-initStates.py train  or python lstm-initStates.py check')
-        exit()
+    # if(len(sys.argv) != 2 or (sys.argv[1] != 'train' and sys.argv[1] != 'eval')):
+    #     print('Please specify the mode.\ne.g. python lstm-initStates.py train  or python lstm-initStates.py check')
+    #     exit()
 
-    if(sys.argv[1] == 'train'):
+    # if(sys.argv[1] == 'train'):
+    if True:
         learningRate = 0.001
         numEpoch = 100000
 

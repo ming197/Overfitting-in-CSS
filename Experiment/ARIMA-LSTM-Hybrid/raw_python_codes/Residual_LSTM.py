@@ -1,21 +1,34 @@
 import pandas as pd
 import numpy as np
-import os
+import os, random
 import argparse
 import ast
+from tensorflow import set_random_seed
 from keras.models import Sequential, load_model
 from keras.layers import Dense, LSTM, Activation
 from keras import backend as K
 from keras.utils.generic_utils import get_custom_objects
 from keras.callbacks import ModelCheckpoint
 from keras.regularizers import l1_l2
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+
+# 固定随机数种子
+SEED = 9
+os.environ['PYTHONHASHSEED']=str(SEED)
+random.seed(SEED)
+np.random.seed(SEED)
+set_random_seed(SEED)
 
 parser = argparse.ArgumentParser(description='Parameters Configuration!')
 parser.add_argument('--reg', '-r', help='正则化', type=ast.literal_eval, default=False)
 parser.add_argument('--dropout', '-d', help='Dropout', type=ast.literal_eval, default=False)
+parser.add_argument('--epochs', '-e', help='Dropout', type=ast.literal_eval, default=350)
 args = parser.parse_args()
 Reg = args.reg
 Dropout = args.dropout
+epochs = args.epochs
 
 
 d = 'hybrid_LSTM'
@@ -92,14 +105,14 @@ if (Dropout and not Reg):
 model.add(Dense(1))
 model.add(Activation(double_tanh))
 model.compile(loss='mean_squared_error', optimizer='adam', metrics=['mse', 'mae'])
-#, kernel_regularizer=l1_l2(0,0.1), bias_regularizer=l1_l2(0,0.1),
+
 
 print(model.metrics_names)
 # Fitting the Model
 model_scores = {}
 
 epoch_num=1
-for _ in range(171):
+for _ in range(epochs):
 
     # train the model
     dir = '../models/'+d
@@ -111,11 +124,11 @@ for _ in range(171):
 
     if len(file_list) != 0 :
         epoch_num = len(file_list) + 1
-        recent_model_name = 'epoch'+str(epoch_num-1)+'.h5'
+        recent_model_name = 'epoch' + str(epoch_num-1) + '.h5'
         filepath = '../models/' + d + '/' + recent_model_name
         model = load_model(filepath)
 
-    filepath = '../models/' + d + '/epoch'+str(epoch_num)+'.h5'
+    filepath = '../models/' + d + '/epoch' + str(epoch_num)+'.h5'
 
     checkpoint = ModelCheckpoint(filepath, monitor='loss', verbose=1, save_best_only=False, mode='min')
     callbacks_list = [checkpoint]
