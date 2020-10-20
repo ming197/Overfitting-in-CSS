@@ -91,7 +91,8 @@ model = Sequential()
 print("Reg: ", Reg)
 print("Dropout: ", Dropout)
 if (not Reg and not Dropout):
-    model.add(LSTM(25, input_shape=(20,1), dropout=0.0, kernel_regularizer=l1_l2(0.00,0.00), bias_regularizer=l1_l2(0.00,0.00)))
+    # model.add(LSTM(25, input_shape=(20,1), dropout=0.0, kernel_regularizer=l1_l2(0.00,0.00), bias_regularizer=l1_l2(0.00,0.00)))
+    model.add(LSTM(25, input_shape=(20,1)))
 if (Reg and Dropout):
     d += '_with_reg_dropout'
     model.add(LSTM(25, input_shape=(20,1), dropout=0.2, kernel_regularizer=l1_l2(0.00,0.1), bias_regularizer=l1_l2(0.00,0.1)))

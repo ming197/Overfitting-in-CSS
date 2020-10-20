@@ -50,8 +50,8 @@ class Sequence(nn.Module):
             if(t ==0):
                 h_t = h0
                 c_t = torch.zeros(self.numLayers, numDataInBatch, self.hidden_size).to(device)
-                print("h_t size: ", h_t.size())
-                print("c_t size: ", c_t.size())
+                # print("h_t size: ", h_t.size())
+                # print("c_t size: ", c_t.size())
                 input_t = torch.zeros(1, numDataInBatch, self.input_dim).to(device)  # firstDim = time = 1
             else:
                 input_t = output
