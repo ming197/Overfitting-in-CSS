@@ -25,15 +25,18 @@ SP500_df = pd.read_csv('data/SPXconst.csv')
 all_companies = list(set(SP500_df.values.flatten()))
 all_companies.remove(np.nan)
 
+# 字典形式： {"1990-01" : ["A", "AAL", ...], ...}，日期：股票代号的list
 constituents = {'-'.join(col.split('/')[::-1]):set(SP500_df[col].dropna()) 
                 for col in SP500_df.columns}
 
+# 字典形式：{"1993" : ["A", "AAL", ...], "1994": [...], ..., "2015": [...]}
 constituents_train = {} 
 for test_year in range(1993,2016):
-    months = [str(t)+'-0'+str(m) if m<10 else str(t)+'-'+str(m) 
+    months = [(str(t)+'-0'+str(m) if m<10 else str(t)+'-'+str(m) )          # if-else 表达式
               for t in range(test_year-3,test_year) for m in range(1,13)]
+    # 每月的tickers的列表
     constituents_train[test_year] = [list(constituents[m]) for m in months]
-    constituents_train[test_year] = set([i for sublist in constituents_train[test_year] 
+    constituents_train[test_year] = set([i for sublist in constituents_train[test_year] #去重
                                          for i in sublist])
 
 def makeLSTM():
