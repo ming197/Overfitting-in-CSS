@@ -119,7 +119,7 @@ def simulate(test_data,predictions):
     print('Result : ',rets.mean())  
     return rets       
 
-    
+# 生成label：close_price / open_price - 1
 def create_label(df_open,df_close,perc=[0.5,0.5]):
     if not np.all(df_close.iloc[:,0]==df_open.iloc[:,0]):
         print('Date Index issue')
@@ -130,18 +130,26 @@ def create_label(df_open,df_close,perc=[0.5,0.5]):
     return label[1:]
 
 def create_stock_data(df_open,df_close,st,m=240):
+    '''
+        df_open: 某年的开盘价
+        df_close： 某年的收盘价
+        st: 股票代码
+    '''
     st_data = pd.DataFrame([])
     st_data['Date'] = list(df_close['Date'])
     st_data['Name'] = [st]*len(st_data)
+    # 日变化率: close_price / open_price - 1
     daily_change = df_close[st]/df_open[st]-1
     for k in range(m)[::-1]:
         st_data['IntraR'+str(k)] = daily_change.shift(k)
 
+    # close_price(t + 1) / open_price(t) - 1
     nextday_ret = (np.array(df_open[st][1:])/np.array(df_close[st][:-1])-1)
     nextday_ret = pd.Series(list(nextday_ret)+[np.nan])     
     for k in range(m)[::-1]:
         st_data['NextR'+str(k)] = nextday_ret.shift(k)
 
+    # 收盘价的变化率：close_price(t + 1) / close_price(t) - 1
     close_change = df_close[st].pct_change()
     for k in range(m)[::-1]:
         st_data['CloseR'+str(k)] = close_change.shift(k)
@@ -179,8 +187,9 @@ for test_year in range(1993,2020):
     df_open = pd.read_csv(filename)
     filename = 'data/Close-'+str(test_year-3)+'.csv'
     df_close = pd.read_csv(filename)
-    
+    # 生成标签
     label = create_label(df_open,df_close)
+    # 对应年份的股票代码
     stock_names = sorted(list(constituents[str(test_year-1)+'-12']))
     train_data,test_data = [],[]
 
