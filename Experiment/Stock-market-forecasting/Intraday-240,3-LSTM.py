@@ -55,8 +55,9 @@ def callbacks_req(model_type='LSTM'):
     csv_logger = CSVLogger(model_folder+'/training-log-'+model_type+'-'+str(test_year)+'.csv')
     filepath = model_folder+"/model-" + model_type + '-' + str(test_year) + "-E{epoch:02d}.h5"
     model_checkpoint = ModelCheckpoint(filepath, monitor='val_loss',save_best_only=False, period=1)
-    earlyStopping = EarlyStopping(monitor='val_loss',mode='min',patience=10,restore_best_weights=True)
-    return [csv_logger,earlyStopping,model_checkpoint]
+    # earlyStopping = EarlyStopping(monitor='val_loss',mode='min',patience=10,restore_best_weights=True)
+    # return [csv_logger,earlyStopping,model_checkpoint]
+    return [csv_logger, model_checkpoint]
 
 def reshaper(arr):
     arr = np.array(np.split(arr,3,axis=1))
@@ -65,6 +66,8 @@ def reshaper(arr):
     return arr
 
 def trainer(train_data,test_data):
+    # print("Test year: ", test_year)
+    # Train Data
     np.random.shuffle(train_data)
     train_x,train_y,train_ret = train_data[:,2:-2],train_data[:,-1],train_data[:,-2]
     train_x = reshaper(train_x)
@@ -73,18 +76,42 @@ def trainer(train_data,test_data):
     enc = OneHotEncoder(handle_unknown='ignore')
     enc.fit(train_y)
     enc_y = enc.transform(train_y).toarray()
+    # print("y_label:", enc_y)
+    # return
     train_ret = np.hstack((np.zeros((len(train_data),1)),train_ret)) 
 
+    # Test Data
+    test_x,test_y,test_ret = test_data[:,2:-2],test_data[:,-1],test_data[:,-2]
+    test_x = reshaper(test_x)
+    test_y = np.reshape(test_y,(-1, 1))
+    test_ret = np.reshape(test_ret,(-1, 1))
+    enc = OneHotEncoder(handle_unknown='ignore')
+    enc.fit(test_y)
+    enc_yTest = enc.transform(test_y).toarray()
+    test_ret = np.hstack((np.zeros((len(test_data),1)),test_ret)) 
+
     model = makeLSTM()
-    callbacks = callbacks_req(model_type)
+    # callbacks = callbacks_req(model_type)
+    callbacks = callbacks_req()
     
-    model.fit(train_x,
+    history = model.fit(train_x,
               enc_y,
               epochs=1000,
-              validation_split=0.2,
+              validation_data=(test_x,enc_yTest),
               callbacks=callbacks,
               batch_size=512
               )
+
+    df = pd.DataFrame(columns=["train loss", "val loss", 'train acc', 'val acc'])
+    df.index.name = "epochs"
+
+    df["train loss"] = pd.Series(history.history['loss'])
+    df["val loss"] = pd.Series(history.history['val_loss'])
+    df["train acc"] = pd.Series(history.history['acc'])
+    df["val acc"] = pd.Series(history.history['val_acc'])
+
+    df.to_csv("./loss/loss({}).csv".format(test_year))
+    print("Train in {} Finished!".format(test_year))
 
     dates = list(set(test_data[:,0]))
     predictions = {}
@@ -160,6 +187,7 @@ def create_stock_data(df_open,df_close,st,m=240):
     st_data = st_data.dropna()
     
     trade_year = st_data['Month'].str[:4]
+
     st_data = st_data.drop(columns=['Month'])
     st_train_data = st_data[trade_year<str(test_year)]
     st_test_data = st_data[trade_year==str(test_year)]
@@ -170,14 +198,15 @@ def scalar_normalize(train_data,test_data):
     scaler.fit(train_data[:,2:-2])
     train_data[:,2:-2] = scaler.transform(train_data[:,2:-2])
     test_data[:,2:-2] = scaler.transform(test_data[:,2:-2])    
-    
+    return train_data, test_data
+
 model_folder = 'models1'
 result_folder = 'results1'
 for directory in [model_folder,result_folder]:
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-for test_year in range(1993,2020):
+for test_year in range(1993,2018):
     
     print('-'*40)
     print(test_year)
@@ -193,6 +222,7 @@ for test_year in range(1993,2020):
     stock_names = sorted(list(constituents[str(test_year-1)+'-12']))
     train_data,test_data = [],[]
 
+    # 生成训练数据和测试数据
     start = time.time()
     for st in stock_names:
         st_train_data,st_test_data = create_stock_data(df_open,df_close,st)
@@ -202,22 +232,23 @@ for test_year in range(1993,2020):
     train_data = np.concatenate([x for x in train_data])
     test_data = np.concatenate([x for x in test_data])
     
-    scalar_normalize(train_data,test_data)
+    train_data,test_data = scalar_normalize(train_data,test_data)
     print(train_data.shape,test_data.shape,time.time()-start)
     
     model,predictions = trainer(train_data,test_data)
-    returns = simulate(test_data,predictions)
-    returns.to_csv(result_folder+'/avg_daily_rets-'+str(test_year)+'.csv')
+
+    # returns = simulate(test_data,predictions)
+    # returns.to_csv(result_folder+'/avg_daily_rets-'+str(test_year)+'.csv')
     
-    result = Statistics(returns.sum(axis=1))
-    print('\nAverage returns prior to transaction charges')
-    result.shortreport() 
+    # result = Statistics(returns.sum(axis=1))
+    # print('\nAverage returns prior to transaction charges')
+    # result.shortreport() 
     
-    with open(result_folder+"/avg_returns.txt", "a") as myfile:
-        res = '-'*30 + '\n'
-        res += str(test_year) + '\n'
-        res += 'Mean = ' + str(result.mean()) + '\n'
-        res += 'Sharpe = '+str(result.sharpe()) + '\n'
-        res += '-'*30 + '\n'
-        myfile.write(res)
+    # with open(result_folder+"/avg_returns.txt", "a") as myfile:
+    #     res = '-'*30 + '\n'
+    #     res += str(test_year) + '\n'
+    #     res += 'Mean = ' + str(result.mean()) + '\n'
+    #     res += 'Sharpe = '+str(result.sharpe()) + '\n'
+    #     res += '-'*30 + '\n'
+    #     myfile.write(res)
             
